@@ -1,0 +1,23 @@
+{
+    "Critical":[
+        "remote code execution", "arbitrary code execution", "privilege escalation", 
+    "unauthorized access", "local file inclusion", "command injection", 
+    "path traversal", "directory traversal","man-in-the-middle attackers to spoof ssl servers", 
+    "dll hijack", "information disclosure", "stack buffer overflow", "use-after-free vulnerability", 
+    "cross site scripting", "sql injection", "impact confidentiality & integrity", 
+    "server-side request forgery (ssrf)", "authentication vulnerabilities", "xml external entity (xxe) injection", 
+    "arbitrary memory write", "bypass vulnerability", "out-of-bounds-arrays", "race conditions", 
+    "remote file inclusion", "heap-based buffer overflow", "input validation", "malicious executable", 
+    "remote command execution", "brute force attack", "improper neutralization of input", "elevation of privilege",
+    "exposure of sensitive data", "SQL injection", "arbitrary memory access", "exploits local priv escalation",
+    "privilege escalation", "access control", "escalate to admin", "unauthorized access", "data disclosure", 
+    "sensitive information", "execute arbitrary code","read arbitrary files","execute arbitrary PHP code",
+    "code execution","execute arbitrary files","execute arbitrary Java code", "execute arbitrary commands",
+    "read data in the client memory", "read sensitive memory","execute arbitrary"
+
+    ],
+    "Non-Critical":[
+        "denial of service", "crash", "memory consumption", "DoS attacks", "DoS"
+
+    ]
+}
