@@ -2,7 +2,7 @@
 
 # Installation 
 python 3.11
-pip -r install requirements.txt 
+pip install -r requirements.txt 
 pip install torch 
 hugging face -> account creation 
 

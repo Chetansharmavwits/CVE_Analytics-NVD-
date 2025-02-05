@@ -63,20 +63,19 @@ def merge_product_component(file1: pd.DataFrame, file2: str) -> pd.DataFrame:
     file_to_component = df2.set_index('File Name')['Component Name'].to_dict()
     
     try:
-        file1['Component Name'] =file1.apply(
-            lambda row:row['Component Name']
-            if pd.notna(row['Component Name']) and row['File Name'] not in file_to_component
-            else file_to_component.get(row['File Name'],row['Component Name']),
-            axis= 1
+        file1['Component Name'] = file1.apply(
+            lambda row: row['Component Name']
+            if pd.notna(row['Component Name'])
+            else file_to_component.get(row['File Name'], ''),
+            axis=1
         )
-    except:
+    except :
         file1['Component Name'] = file1['File Name'].map(file_to_component)
-   
-        
-        
+
     output_columns_file1 = ['Module', 'File Name', 'Company Name', 'Product Name', 'Component Name', 'Product Description',  'Product Version']
     output_columns_df2 = ['File Name', 'Component Name']
     return file1[output_columns_file1], df2[output_columns_df2]
+
 
 
 def generate_dynamic_url(keyword, severity):
@@ -209,7 +208,7 @@ def process_excel(product_df, repo_file, get_components_file, nvd_with_no_severi
     print(f"Script started at: {start_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
     print("---------------------------------------------")
     
-    product_df = product_df.head(60)
+    product_df = product_df.head(65)
     
 
     product_df.to_excel("json_output.xlsx")
@@ -251,8 +250,7 @@ def process_excel(product_df, repo_file, get_components_file, nvd_with_no_severi
     df['Query Name'] = df['Component Name'].fillna(df['Product Name']).map(lambda x: x.replace("®", "").replace("  ", " "))  # Use Component Name if available, else Product Name
     unique_queries = df['Query Name'].drop_duplicates().tolist()
     print(f"Number of unique queries to fetch: {len(unique_queries)}")
-    st.sidebar.success(f"Number of unique queries to fetch: {len(unique_queries)}")
-
+    
     all_cve_data = []
     missing_components = []
     processed_queries = set()  # To track already processed queries
@@ -260,81 +258,84 @@ def process_excel(product_df, repo_file, get_components_file, nvd_with_no_severi
     max_components_to_process = 30
     total_components = len(unique_queries)
     print(total_components)
-    st.sidebar.success("No of total component:{}".format(total_components))
     
     
-    progress_bar = st.progress(0,"CVE Search in process..")
-    for idx, query_name in enumerate(unique_queries):
-        # # Break the loop if we have processed the first 5 components
-        if idx >= total_components:
-            print(f"Processed {total_components} components, stopping further execution.")
-            break
-        if query_name in processed_queries:
-            continue  # Skip already processed queries
-        component_found = False
-        print(f"* Processing query {idx + 1}/{total_components}: {cyan}{query_name}{reset}")
-        print("---------------------------------------------")
-        progress_bar.progress(idx + 1)
-    
-        # Fetch HIGH and CRITICAL CVE data
-        for severity in severities:
-            print(f"{yellow}Fetching {severity} severity CVEs for component --> {query_name}{reset}")
+    with st.spinner("CVE Data in progress..."): 
+        progress_bar = st.progress(0)
+        progress_text = st.empty()
+        for idx, query_name in enumerate(unique_queries):
+            # # Break the loop if we have processed the first 5 components
+            if idx >= total_components:
+                print(f"Processed {total_components} components, stopping further execution.")
+                break
+            if query_name in processed_queries:
+                continue  # Skip already processed queries
+            component_found = False
+            print(f"* Processing query {idx + 1}/{total_components}: {cyan}{query_name}{reset}")
             print("---------------------------------------------")
+            progress_bar.progress((idx + 1)/total_components)
+            progress_text.text(f"Count:{idx + 1}/{total_components} ")
             
-            severity_cve_data = search_nvd(query_name, severity, api_key)
-            if severity_cve_data:
-                print(f"{green}Found {len(severity_cve_data)} CVE IDs for severity {severity}.{reset}")
+            # Fetch HIGH and CRITICAL CVE data
+            for severity in severities:
+                print(f"{yellow}Fetching {severity} severity CVEs for component --> {query_name}{reset}")
                 print("---------------------------------------------")
-                all_cve_data.extend(severity_cve_data)
-                component_found = True  # Mark as found if data is returned
-            
-        if component_found:
-        # Append query_name and corresponding file names to file2 if not already present
-            matching_rows = df[df['Query Name'] == query_name]
+                
+                severity_cve_data = search_nvd(query_name, severity, api_key)
+                if severity_cve_data:
+                    print(f"{green}Found {len(severity_cve_data)} CVE IDs for severity {severity}.{reset}")
+                    print("---------------------------------------------")
+                    all_cve_data.extend(severity_cve_data)
+                    component_found = True  # Mark as found if data is returned
+                
+            if component_found:
+            # Append query_name and corresponding file names to file2 if not already present
+                matching_rows = df[df['Query Name'] == query_name]
 
-            for _, row in matching_rows.iterrows():
-                file_name = row['File Name']
-                component_name = row['Query Name']
+                for _, row in matching_rows.iterrows():
+                    file_name = row['File Name']
+                    component_name = row['Query Name']
 
-                # Check if file name already exists in file2
-                if file_name not in df2['File Name'].values:
-                    # Append new entry to file2
-                    new_row = pd.DataFrame({'File Name': [file_name], 'Component Name': [component_name]})
-                    df2 = pd.concat([df2, new_row], ignore_index=True)
-    
-    
-        else:
-            # Add all rows corresponding to the missing query
-            matching_rows = df[df['Query Name'] == query_name].to_dict('records')
-            missing_components.extend(matching_rows)
-            print(f"{query_name} not found in NVD database.")
-            print("---------------------------------------------")
+                    # Check if file name already exists in file2
+                    if file_name not in df2['File Name'].values:
+                        # Append new entry to file2
+                        new_row = pd.DataFrame({'File Name': [file_name], 'Component Name': [component_name]})
+                        df2 = pd.concat([df2, new_row], ignore_index=True)
+        
+        
+            else:
+                # Add all rows corresponding to the missing query
+                matching_rows = df[df['Query Name'] == query_name].to_dict('records')
+                missing_components.extend(matching_rows)
+                print(f"{query_name} not found in NVD database.")
+                print("---------------------------------------------")
 
-        processed_queries.add(query_name)
-    
+            processed_queries.add(query_name)
+        
     st.sidebar.success('Severity Analysis on Missing Data Procressing...')
 
-    # Save missing components to Excel
-    if missing_components:
-        missing_df = pd.DataFrame(missing_components).drop_duplicates(subset=['Module', 'File Name'])
+    with st.spinner("Severity Analysis on Missing Data Procressing..."): 
+        # Save missing components to Excel
+        if missing_components:
+            missing_df = pd.DataFrame(missing_components).drop_duplicates(subset=['Module', 'File Name'])
 
-        nvd_with_no_severity, actual_missing_data = fetch_from_backup_url(missing_df, api_key)
+            nvd_with_no_severity, actual_missing_data = fetch_from_backup_url(missing_df, api_key)
 
-        
-        # Save results to separate files
-        if nvd_with_no_severity:
-            pd.DataFrame(nvd_with_no_severity).to_excel(nvd_with_no_severity_file, index=False, engine='openpyxl')
-            print(f"{green}NVD components without severity saved to {nvd_with_no_severity_file}{reset}.")
             
+            # Save results to separate files
+            if nvd_with_no_severity:
+                pd.DataFrame(nvd_with_no_severity).to_excel(nvd_with_no_severity_file, index=False, engine='openpyxl')
+                print(f"{green}NVD components without severity saved to {nvd_with_no_severity_file}{reset}.")
+                
 
-        if actual_missing_data:
-            pd.DataFrame(actual_missing_data).to_excel(actual_missing_data_file, index=False, engine='openpyxl')
-            print(f"{green}Actual missing components saved to {actual_missing_data_file}.{reset}")
-                    
-    else:
-        missing_df = pd.DataFrame()
-        print("No missing components found. Missing components file not created.")
-    print("---------------------------------------------")
+            if actual_missing_data:
+                pd.DataFrame(actual_missing_data).to_excel(actual_missing_data_file, index=False, engine='openpyxl')
+                print(f"{green}Actual missing components saved to {actual_missing_data_file}.{reset}")
+                        
+        else:
+            missing_df = pd.DataFrame()
+            print("No missing components found. Missing components file not created.")
+        print("---------------------------------------------")
 
     df2.drop_duplicates(subset=['File Name'], inplace=True)  # Ensure file names are unique
     df2.to_excel(repo_file, index=False, engine='openpyxl')  # Overwrite the existing file2
@@ -370,7 +371,6 @@ def CVE_Extraction(data, repo_file, api_key, get_components_file ,nvd_with_no_se
     calling function
     '''
     severities = ["HIGH", "CRITICAL"]
-    
     cve_df = process_excel(data, repo_file, get_components_file,nvd_with_no_severity_file,actual_missing_data_file ,severities, api_key)
     
     return cve_df 
@@ -448,5 +448,5 @@ def fetch_from_backup_url(missing_df, api_key):
 # sen_file_path = "Results/Final/Final_SEN_Data.xlsx"
 # severities = ["HIGH", "CRITICAL"]
 
-# product_df = pd.read_excel("/Users/aplynek/Documents/Infra_code/Actual_missing_Data.xlsx")
+# product_df = pd.read_excel("/Users/aplynek/Documents/Infra_code_ver1/Actual_missing_Data.xlsx")
 # process_excel(product_df, repo_file, get_components_file, nvd_with_no_severity_file,actual_missing_data_file,severities, api_key)
