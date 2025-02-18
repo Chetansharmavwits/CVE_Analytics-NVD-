@@ -208,11 +208,8 @@ def process_excel(product_df, repo_file, get_components_file, nvd_with_no_severi
     print(f"Script started at: {start_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
     print("---------------------------------------------")
     
-    product_df = product_df.head(65)
+    product_df = product_df.head(15)
     
-
-    product_df.to_excel("json_output.xlsx")
-
     print("*** Step 1st Json to Excel Started") 
 
     if os.path.exists(get_components_file):

@@ -16,19 +16,11 @@ import plotly.subplots as sp
 
 
 load_dotenv()
-
-keywords_file = os.getenv("keywords_file")
-missing_component_data = os.getenv("missing_component_data")
-repo_file = os.getenv("repo_file")
-get_components_file = os.getenv("get_components_file")
-nvd_with_no_severity_file = os.getenv("nvd_with_no_severity_file")
-actual_missing_data_file = os.getenv("actual_missing_data_file")
 api_key = os.getenv("api_key")
+keywords_file = os.getenv("keywords_file")
 source_path = os.getenv("source_path")
 destination_path = os.getenv("destination_path")
-cve_file_path = os.getenv("cve_file_path")
-nvd_file_path = os.getenv("nvd_file_path")
-sen_file_path = os.getenv("sen_file_path")
+
 
 st.set_page_config(page_title="Analytics Dashboard", page_icon="🌎", layout="wide")
 st.title("📈 CVE Analytics Dashboard ")
@@ -107,14 +99,23 @@ def update_histogram_chart():
         style_metric_cards(background_color="#071021", border_left_color="#1f66bd")
 
 def run_on_startup():
-    if os.path.exists(source_path):
-        shutil.rmtree(source_path)
-        os.mkdir(source_path)
-    else:
-        os.mkdir(source_path)
+    # if os.path.exists(source_path):
+    #     shutil.rmtree(source_path)
+    #     os.mkdir(source_path)
+    # else:
+    #     os.mkdir(source_path)
+
     destination_folder = os.path.join('Results',f"Sentimant_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
     os.mkdir(destination_folder)
     st.session_state.destination_folder = destination_folder
+    shutil.copy('Data/Component_Data.xlsx', st.session_state.destination_folder)
+    st.session_state.missing_component_data = os.path.join(st.session_state.destination_folder,"Component_Data.xlsx")
+    st.session_state.repo_file = os.path.join(st.session_state.destination_folder, "Component_Data.xlsx")
+    st.session_state.get_components_file = os.path.join(st.session_state.destination_folder,'Component_File.xlsx')
+    st.session_state.nvd_with_no_severity_file = os.path.join(st.session_state.destination_folder,'NVD_with_No_Severity.xlsx')
+    st.session_state.actual_missing_data_file =os.path.join(st.session_state.destination_folder, 'Actual_missing_Data.xlsx')
+    
+
 
 
 def save_and_update(data, filename):
@@ -209,21 +210,22 @@ if button_1:
         st.sidebar.success("Destination Path:{}".format(st.session_state.destination_folder))
 
         json_data = json_to_excel(upload_file)
+
+ 
         
+        cve_data = CVE_Extraction(data=json_data, repo_file=st.session_state.repo_file, get_components_file=st.session_state.get_components_file, nvd_with_no_severity_file=st.session_state.nvd_with_no_severity_file, actual_missing_data_file=st.session_state.actual_missing_data_file, api_key=api_key)
         
-        cve_data = CVE_Extraction(data=json_data, repo_file=repo_file, get_components_file=get_components_file, nvd_with_no_severity_file=nvd_with_no_severity_file, actual_missing_data_file=actual_missing_data_file, api_key=api_key)
-        
-        if os.path.exists(get_components_file):
-            sen_data = process_sentiment_data(pd.read_excel(get_components_file))
+        if os.path.exists(st.session_state.get_components_file):
+            sen_data = process_sentiment_data(pd.read_excel(st.session_state.get_components_file))
             st.session_state.sen_data = sen_data
         
-        if os.path.exists(actual_missing_data_file):
-            missing_data = pd.read_excel(actual_missing_data_file)
+        if os.path.exists(st.session_state.actual_missing_data_file):
+            missing_data = pd.read_excel(st.session_state.actual_missing_data_file)
         else:
             missing_data = pd.DataFrame()
 
-        if os.path.exists(nvd_with_no_severity_file):
-            nvd_data = pd.read_excel(nvd_with_no_severity_file)
+        if os.path.exists(st.session_state.nvd_with_no_severity_file):
+            nvd_data = pd.read_excel(st.session_state.nvd_with_no_severity_file)
         else:
             nvd_data = pd.DataFrame()
         
@@ -237,27 +239,27 @@ if button_1:
     else:
         st.error("Load the component.json file")
 
-if os.path.exists(get_components_file) :
+if os.path.exists(st.session_state.get_components_file) :
     st.write("Detail Analysis")
 
-    if os.path.exists(actual_missing_data_file):  
+    if os.path.exists(st.session_state.actual_missing_data_file):  
         cve_data =pd.DataFrame()
-        missing_data ,index = process_missing_data(actual_missing_data_file)
+        missing_data ,index = process_missing_data(st.session_state.actual_missing_data_file)
         st.session_state.missing_data = missing_data
         if index == 1:
             st.sidebar.success("Missing Data CVE Analysis in progress")
         
-            cve_data = CVE_Extraction(data= missing_data ,repo_file=repo_file,get_components_file=get_components_file,nvd_with_no_severity_file=nvd_with_no_severity_file,actual_missing_data_file=actual_missing_data_file,api_key=api_key) 
+            cve_data = CVE_Extraction(data= missing_data ,repo_file=st.session_state.repo_file,get_components_file=st.session_state.get_components_file,nvd_with_no_severity_file=st.session_state.nvd_with_no_severity_file,actual_missing_data_file=st.session_state.actual_missing_data_file,api_key=api_key) 
             
             st.sidebar.success("CVE Analysis in done for missing data")
             
-            if os.path.exists(nvd_with_no_severity_file):
-                nvd_data = pd.read_excel(nvd_with_no_severity_file)
+            if os.path.exists(st.session_state.nvd_with_no_severity_file):
+                nvd_data = pd.read_excel(st.session_state.nvd_with_no_severity_file)
             else:
                 nvd_data = pd.DataFrame()
             
-            if os.path.exists(get_components_file):
-                sen_data = process_sentiment_data(pd.read_excel(get_components_file))
+            if os.path.exists(st.session_state.get_components_file):
+                sen_data = process_sentiment_data(pd.read_excel(st.session_state.get_components_file))
             else:
                 sen_data = pd.DataFrame()
         
@@ -270,7 +272,7 @@ if os.path.exists(get_components_file) :
             save_and_update(sen_data, 'Final_SEN_Data.xlsx')
     else:
         st.sidebar.warning("No missing data is created")
-        if os.path.exists(get_components_file):
+        if os.path.exists(st.session_state.get_components_file):
             show_data = st.session_state.sen_data[['Component Name','CVE ID','Descriptions','Severity','Classification']]
             
             st.success('Unique Components:{}'.format(len(st.session_state.sen_data['Component Name'].unique())))
